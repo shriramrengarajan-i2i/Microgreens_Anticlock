@@ -18,6 +18,27 @@ export class AppConfigService {
     };
   }
 
+  get elasticsearch(): {
+    url: string;
+    indexPrefix: string;
+    apiKey: string | undefined;
+    requestTimeoutMs: number;
+  } {
+    const indexPrefix = this.config.get<string>('ELASTICSEARCH_INDEX_PREFIX') || 'micro-v5';
+    // Elasticsearch index names must be lowercase and cannot start with '-', '_' or '+'.
+    if (!/^[a-z0-9][a-z0-9_-]*$/.test(indexPrefix)) {
+      throw new Error(
+        'ELASTICSEARCH_INDEX_PREFIX must be lowercase letters, digits, "-" or "_" and start with a letter or digit',
+      );
+    }
+    return {
+      url: (this.config.get<string>('ELASTICSEARCH_URL') || 'http://localhost:9200').replace(/\/+$/, ''),
+      indexPrefix,
+      apiKey: this.config.get<string>('ELASTICSEARCH_API_KEY') || undefined,
+      requestTimeoutMs: this.positiveInt('ELASTICSEARCH_REQUEST_TIMEOUT_MS', 5000),
+    };
+  }
+
   private positiveInt(key: string, fallback: number): number {
     const value = Number(this.config.get<string>(key));
     return Number.isInteger(value) && value > 0 ? value : fallback;
